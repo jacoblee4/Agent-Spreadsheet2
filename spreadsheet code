@@ -1,1 +1,38 @@
-wefew
+(function execute(inputs, outputs) {
+
+    var recordSysId = inputs.record_sys_id;
+    var tableName = inputs.table_name;
+
+    // Find the most recent CSV attachment on the record
+    var attachQuery = new GlideRecord('sys_attachment');
+    attachQuery.addQuery('table_sys_id', recordSysId);
+    attachQuery.addQuery('table_name', tableName);
+    attachQuery.addQuery('content_type', 'CONTAINS', 'csv');
+    attachQuery.orderByDesc('sys_created_on');
+    attachQuery.setLimit(1);
+    attachQuery.query();
+
+    if (!attachQuery.next()) {
+        outputs.csv_content = '';
+        outputs.attach_sys_id = '';
+        outputs.headers = '';
+        outputs.error = 'No CSV attachment found on record';
+        return;
+    }
+
+    var attachSysId = attachQuery.sys_id.toString();
+
+    // Read the attachment content
+    var attachApi = new GlideSysAttachment();
+    var csvContent = attachApi.getContent(attachQuery);
+
+    // Parse headers from first row
+    var lines = csvContent.split('\n');
+    var headers = lines[0] ? lines[0].trim() : '';
+
+    outputs.csv_content = csvContent;
+    outputs.attach_sys_id = attachSysId;
+    outputs.headers = headers;
+    outputs.error = '';
+
+})(inputs, outputs);
