@@ -3,7 +3,6 @@
     var recordSysId = inputs.record_sys_id;
     var tableName = inputs.table_name;
 
-    // Find the most recent CSV attachment on the record
     var attachQuery = new GlideRecord('sys_attachment');
     attachQuery.addQuery('table_sys_id', recordSysId);
     attachQuery.addQuery('table_name', tableName);
@@ -22,13 +21,21 @@
 
     var attachSysId = attachQuery.sys_id.toString();
 
-    // Read the attachment content
     var attachApi = new GlideSysAttachment();
     var csvContent = attachApi.getContent(attachQuery);
 
-    // Parse headers from first row
+    if (!csvContent || csvContent.length === 0) {
+        outputs.csv_content = '';
+        outputs.attach_sys_id = attachSysId;
+        outputs.headers = '';
+        outputs.error = 'Attachment found but content is empty';
+        return;
+    }
+
+    csvContent = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
     var lines = csvContent.split('\n');
-    var headers = lines[0] ? lines[0].trim() : '';
+    var headers = (lines && lines.length > 0 && lines[0]) ? lines[0].trim() : '';
 
     outputs.csv_content = csvContent;
     outputs.attach_sys_id = attachSysId;
